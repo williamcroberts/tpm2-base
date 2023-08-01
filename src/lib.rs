@@ -158,6 +158,7 @@ pub struct Tpm2bIv {
 }
 
 #[repr(C)]
+#[derive(PartialEq, Debug)]
 pub struct Tpm2bName {
     size: u16,
     pub name: [u8; mem::size_of::<TpmuName>()],
@@ -668,6 +669,8 @@ pub trait Marshalable {
 pub trait Tpm2bSimple {
     fn get_size(&self) -> u16;
     fn get_buffer(&self) -> &[u8];
+    fn from_bytes(buffer: &[u8]) -> Result<Self, Tpm2Rc>
+        where Self: Sized;
 }
 
 impl Marshalable for Tpm2bName {
@@ -731,6 +734,25 @@ impl Tpm2bSimple for Tpm2bName {
     fn get_buffer(&self) -> &[u8] {
         &self.name[0..self.get_size() as usize]
     }
+
+    fn from_bytes(buffer: &[u8]) -> Result<Self, Tpm2Rc> {
+
+        // Overflow check
+        if buffer.len() > u16::MAX as usize {
+            return Err(error_codes::TSS2_MU_RC_BAD_SIZE);
+        }
+
+        let mut dest: Self = Self {
+            size: buffer.len() as u16,
+            name: [0; 68], // TODO how to initialize this based on size?
+        };
+
+        for (dst, src) in dest.name.iter_mut().zip(buffer) {
+            *dst = *src
+        }
+
+        Ok(dest)
+    }
 }
 
 macro_rules! impl_marshalable_scalar {
@@ -780,6 +802,25 @@ macro_rules! impl_marshalable_tpm2b_simple {
 
             fn get_buffer(&self) -> &[u8] {
                 &self.$F[0..self.get_size() as usize]
+            }
+
+            fn from_bytes(buffer: &[u8]) -> Result<Self, Tpm2Rc> {
+
+                // Overflow check
+                if buffer.len() > u16::MAX as usize {
+                    return Err(error_codes::TSS2_MU_RC_BAD_SIZE);
+                }
+        
+                let mut dest: Self = Self {
+                    size: buffer.len() as u16,
+                    $F: [0; std::mem::size_of::<$T>() - std::mem::size_of::<u16>()],
+                };
+        
+                for (dst, src) in dest.$F.iter_mut().zip(buffer) {
+                    *dst = *src
+                }
+        
+                Ok(dest)
             }
         }
 
@@ -866,6 +907,12 @@ mod tests {
         assert_eq!(name.get_size(), 5);
         let slice = name.get_buffer();
         assert_eq!(slice, &n[2..]);
+
+        let m: [u8; 5] = [b'h', b'e', b'l', b'l', b'o'];
+        let name_result: Result<Tpm2bName, Tpm2Rc> = Tpm2bName::from_bytes(&m);
+        assert!(name_result.is_ok());
+        let name2 = name_result.unwrap();
+        assert_eq!(name, name2);
     }
 
     #[test]
