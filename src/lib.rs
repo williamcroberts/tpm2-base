@@ -97,9 +97,11 @@ pub mod error_codes {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct TpmsEmpty;
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub union TpmuHa {
     sha: [u8; TPM2_SHA_DIGEST_SIZE as usize],
     sha1: [u8; TPM2_SHA1_DIGEST_SIZE as usize],
@@ -110,67 +112,77 @@ pub union TpmuHa {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct TpmtHa {
     pub hash_alg: TpmiAlgHash,
     pub digest: TpmuHa,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub union TpmuName {
-    pub digest: std::mem::ManuallyDrop<TpmtHa>,
+    pub digest: TpmtHa,
     pub handle: Tpm2Handle,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bDigest {
     size: u16,
     pub buffer: [u8; mem::size_of::<TpmuHa>()],
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bData {
     size: u16,
     pub buffer: [u8; mem::size_of::<TpmuHa>()],
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bEvent {
     size: u16,
     pub buffer: [u8; 1024],
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bMaxBuffer {
     size: u16,
     pub buffer: [u8; TPM2_MAX_DIGEST_BUFFER as usize],
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bMaxNvBuffer {
     size: u16,
     pub buffer: [u8; TPM2_MAX_NV_BUFFER_SIZE as usize],
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bIv {
     size: u16,
     pub buffer: [u8; TPM2_MAX_SYM_BLOCK_SIZE as usize],
 }
 
 #[repr(C)]
-#[derive(PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bName {
     size: u16,
     pub name: [u8; mem::size_of::<TpmuName>()],
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bMaxCapBuffer {
     size: u16,
     pub buffer: [u8; TPM2_MAX_CAP_BUFFER as usize],
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct TpmsClockInfo {
     pub clock: u64,
     pub reset_count: u32,
@@ -179,6 +191,7 @@ pub struct TpmsClockInfo {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct TpmsPcrSelection {
     pub hash: TpmiAlgHash,
     pub sizeof_select: u8,
@@ -186,30 +199,35 @@ pub struct TpmsPcrSelection {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct TpmlPcrSelection {
     pub count: u32,
     pub pcr_selections: [TpmsPcrSelection; TPM2_NUM_PCR_BANKS as usize],
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct TpmsQuoteInfo {
     pub pcr_select: TpmlPcrSelection,
     pub pcr_digest: Tpm2bDigest,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct TpmsCreationInfo {
     pub object_name: Tpm2bName,
     pub creation_hash: Tpm2bDigest,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct TpmsCertifyInfo {
     pub name: Tpm2bName,
     pub qualified_name: Tpm2bName,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct TpmsCommandAuditInfo {
     pub audit_counter: u64,
     pub digest_alg: Tpm2AlgId,
@@ -218,24 +236,28 @@ pub struct TpmsCommandAuditInfo {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct TpmsSessionAuditInfo {
     pub exclusive_session: TpmiYesNo,
     pub session_digest: Tpm2bDigest,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct TpmsTimeInfo {
     pub time: u64,
     pub clock_info: TpmsClockInfo,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct TpmsTimeAttestInfo {
     pub time: TpmsTimeInfo,
     pub firmware_version: u64,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct TpmsNvCertifyInfo {
     pub index_name: Tpm2bName,
     pub offset: u16,
@@ -243,17 +265,19 @@ pub struct TpmsNvCertifyInfo {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub union TPMU_ATTEST {
-    pub certify: std::mem::ManuallyDrop<TpmsCertifyInfo>,
-    pub creation: std::mem::ManuallyDrop<TpmsCreationInfo>,
-    pub quote: std::mem::ManuallyDrop<TpmsQuoteInfo>,
-    pub command_audit: std::mem::ManuallyDrop<TpmsCommandAuditInfo>,
-    pub session_audit: std::mem::ManuallyDrop<TpmsSessionAuditInfo>,
-    pub time: std::mem::ManuallyDrop<TpmsTimeAttestInfo>,
-    pub nv: std::mem::ManuallyDrop<TpmsNvCertifyInfo>,
+    pub certify: TpmsCertifyInfo,
+    pub creation: TpmsCreationInfo,
+    pub quote: TpmsQuoteInfo,
+    pub command_audit: TpmsCommandAuditInfo,
+    pub session_audit: TpmsSessionAuditInfo,
+    pub time: TpmsTimeAttestInfo,
+    pub nv: TpmsNvCertifyInfo,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct TpmsAttest {
     pub magic: Tpm2Generated,
     pub tipe: TpmiStAttest, /* type is a reserved word, rename to tipe */
@@ -265,42 +289,49 @@ pub struct TpmsAttest {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bAttest {
     size: u16,
     pub attestation_data: [u8; mem::size_of::<TpmsAttest>()],
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bSymKey {
     size: u16,
     pub buffer: [u8; TPM2_MAX_SYM_KEY_BYTES as usize],
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bLabel {
     size: u16,
     pub buffer: [u8; TPM2_LABEL_MAX_BUFFER as usize],
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct TpmsDerive {
     pub label: Tpm2bLabel,
     pub context: Tpm2bLabel,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bDerive {
     size: u16,
     pub buffer: [u8; mem::size_of::<TpmsDerive>()],
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub union TpmuSensitiveCreate {
     pub create: [u8; TPM2_MAX_SYM_DATA as usize],
-    pub derive: std::mem::ManuallyDrop<TpmsDerive>,
+    pub derive: TpmsDerive
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bSensitiveData {
     size: u16,
     pub buffer: [u8; mem::size_of::<TpmuSensitiveCreate>()],
@@ -309,48 +340,56 @@ pub struct Tpm2bSensitiveData {
 pub type Tpm2bAuth = Tpm2bDigest;
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct TpmsSensitiveCreate {
     pub user_auth: Tpm2bAuth,
     pub data: Tpm2bSensitiveData,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bSensitiveCreate {
     size: u16,
     pub sensitive: [u8; mem::size_of::<TpmsSensitiveCreate>()],
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bPublicKeyRsa {
     size: u16,
     pub buffer: [u8; TPM2_MAX_RSA_KEY_BYTES as usize],
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bPrivateKeyRsa {
     size: u16,
     pub buffer: [u8; (TPM2_MAX_RSA_KEY_BYTES / 2) as usize],
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bEccParameter {
     size: u16,
     pub buffer: [u8; TPM2_MAX_ECC_KEY_BYTES as usize],
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct TpmsEccPoint {
     pub x: Tpm2bEccParameter,
     pub y: Tpm2bEccParameter,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bEccPoint {
     size: u16,
     pub point: [u8; mem::size_of::<TpmsEccPoint>()],
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub union TpmuEncryptedSecret {
     pub ecc: [u8; mem::size_of::<TpmsEccPoint>()],
     pub rsa: [u8; TPM2_MAX_RSA_KEY_BYTES as usize],
@@ -359,12 +398,14 @@ pub union TpmuEncryptedSecret {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bEncryptedSecret {
     size: u16,
     pub secret: [u8; mem::size_of::<TpmuEncryptedSecret>()],
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct TpmsSchemeXor {
     pub hash_alg: TpmiAlgHash,
     pub kdf: TpmiAlgKdf,
@@ -373,44 +414,50 @@ pub struct TpmsSchemeXor {
 pub type TpmsSchemeHmac = TpmsSchemeHash;
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub union TpmuSchemeKeyedHash {
-    pub hmac: std::mem::ManuallyDrop<TpmsSchemeHmac>,
-    pub exclusive_or: std::mem::ManuallyDrop<TpmsSchemeXor>,
-    pub null: std::mem::ManuallyDrop<TpmsEmpty>,
+    pub hmac: TpmsSchemeHmac,
+    pub exclusive_or: TpmsSchemeXor,
+    pub null: TpmsEmpty,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct TpmtKeyedHashScheme {
     pub scheme: TpmiAlgKeyedhashScheme,
     pub details: TpmuSchemeKeyedHash,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct TpmsKeyedHashParms {
     pub scheme: TpmtKeyedHashScheme,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub union TpmuSymKeyBits {
     pub aes: TpmiAesKeyBits,
     pub sm4: TpmiSm4KeyBits,
     pub camellia: TpmiCamelliaKeyBits,
     pub sym: Tpm2KeyBits,
     pub exclusive_or: TpmiAlgHash,
-    pub null: std::mem::ManuallyDrop<TpmsEmpty>,
+    pub null: TpmsEmpty,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub union TpmuSymMode {
     pub aes: TpmiAlgSymMode,
     pub sm4: TpmiAlgSymMode,
     pub camellia: TpmiAlgSymMode,
     pub sym: TpmiAlgSymMode,
-    pub exclusive_or: std::mem::ManuallyDrop<TpmsEmpty>,
-    pub null: std::mem::ManuallyDrop<TpmsEmpty>,
+    pub exclusive_or: TpmsEmpty,
+    pub null: TpmsEmpty,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct TpmtSymDefObject {
     pub algorithm: TpmiAlgSymObject,
     pub key_bits: TpmuSymKeyBits,
@@ -418,11 +465,13 @@ pub struct TpmtSymDefObject {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct TpmsSymCipherParms {
     pub sym: TpmtSymDefObject,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct TpmsSchemeHash {
     pub hash_alg: TpmiAlgHash,
 }
@@ -439,28 +488,31 @@ pub type TpmsEncSchemeOaep = TpmsSchemeHash;
 pub type TpmsEncSchemeRsaes = TpmsEmpty;
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub union TpmuAsymScheme {
-    pub ecdh: std::mem::ManuallyDrop<TpmsKeySchemeEcdh>,
-    pub ecmqv: std::mem::ManuallyDrop<TpmsKeySchemeEcmqv>,
-    pub rsassa: std::mem::ManuallyDrop<TpmsSigSchemeRsassa>,
-    pub rsapss: std::mem::ManuallyDrop<TpmsSigSchemeRsapss>,
-    pub ecdsa: std::mem::ManuallyDrop<TpmsSigSchemeEcdsa>,
-    pub ecdaa: std::mem::ManuallyDrop<TpmsSigSchemeEcdaa>,
-    pub sm2: std::mem::ManuallyDrop<TpmsSigSchemeSm2>,
-    pub ecschnorr: std::mem::ManuallyDrop<TpmsSigSchemeEcschnorr>,
-    pub rsaes: std::mem::ManuallyDrop<TpmsEncSchemeRsaes>,
-    pub oaep: std::mem::ManuallyDrop<TpmsEncSchemeOaep>,
-    pub any_sig: std::mem::ManuallyDrop<TpmsSchemeHash>,
-    pub null: std::mem::ManuallyDrop<TpmsEmpty>,
+    pub ecdh: TpmsKeySchemeEcdh,
+    pub ecmqv: TpmsKeySchemeEcmqv,
+    pub rsassa: TpmsSigSchemeRsassa,
+    pub rsapss: TpmsSigSchemeRsapss,
+    pub ecdsa: TpmsSigSchemeEcdsa,
+    pub ecdaa: TpmsSigSchemeEcdaa,
+    pub sm2: TpmsSigSchemeSm2,
+    pub ecschnorr: TpmsSigSchemeEcschnorr,
+    pub rsaes: TpmsEncSchemeRsaes,
+    pub oaep: TpmsEncSchemeOaep,
+    pub any_sig: TpmsSchemeHash,
+    pub null: TpmsEmpty,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct TpmtRsaScheme {
     pub scheme: TpmiAlgRsaScheme,
     pub details: TpmuAsymScheme,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct TpmsRsaParms {
     pub symmetric: TpmtSymDefObject,
     pub scheme: TpmtRsaScheme,
@@ -469,6 +521,7 @@ pub struct TpmsRsaParms {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct TpmtEccScheme {
     pub scheme: TpmiAlgEccScheme,
     pub details: TpmuAsymScheme,
@@ -480,21 +533,24 @@ pub type TpmsSchemeKdf2 = TpmsSchemeHash;
 pub type TpmsSchemeKdf1Sp800_108 = TpmsSchemeHash;
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub union TpmuKdfScheme {
-    pub mgf1: std::mem::ManuallyDrop<TpmsSchemeMgf1>,
-    pub kdf1_sp800_56a: std::mem::ManuallyDrop<TpmsSchemeKdf1Sp800_56a>,
-    pub kdf2: std::mem::ManuallyDrop<TpmsSchemeKdf2>,
-    pub kdf1_sp800_108: std::mem::ManuallyDrop<TpmsSchemeKdf1Sp800_108>,
-    pub null: std::mem::ManuallyDrop<TpmsEmpty>,
+    pub mgf1: TpmsSchemeMgf1,
+    pub kdf1_sp800_56a: TpmsSchemeKdf1Sp800_56a,
+    pub kdf2: TpmsSchemeKdf2,
+    pub kdf1_sp800_108: TpmsSchemeKdf1Sp800_108,
+    pub null: TpmsEmpty,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct TpmtKdfScheme {
     pub scheme: TpmiAlgKdf,
     pub details: TpmuKdfScheme,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct TpmsEccParms {
     pub symmetric: TpmtSymDefObject,
     pub scheme: TpmtEccScheme,
@@ -503,36 +559,41 @@ pub struct TpmsEccParms {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct TpmtAsymScheme {
     pub scheme: TpmiAlgAsymScheme,
     pub details: TpmuAsymScheme,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct TpmsAsymParms {
     pub symmetric: TpmtSymDefObject,
     pub scheme: TpmtAsymScheme,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub union TpmuPublicParms {
-    pub keyed_hash_detail: std::mem::ManuallyDrop<TpmsKeyedHashParms>,
-    pub sym_detail: std::mem::ManuallyDrop<TpmsSymCipherParms>,
-    pub rsa_detail: std::mem::ManuallyDrop<TpmsRsaParms>,
-    pub ecc_detail: std::mem::ManuallyDrop<TpmsEccParms>,
-    pub asym_detail: std::mem::ManuallyDrop<TpmsAsymParms>,
+    pub keyed_hash_detail: TpmsKeyedHashParms,
+    pub sym_detail: TpmsSymCipherParms,
+    pub rsa_detail: TpmsRsaParms,
+    pub ecc_detail: TpmsEccParms,
+    pub asym_detail: TpmsAsymParms,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub union TpmuPublicId {
-    pub keyed_hash: std::mem::ManuallyDrop<Tpm2bDigest>,
-    pub sym: std::mem::ManuallyDrop<Tpm2bDigest>,
-    pub rsa: std::mem::ManuallyDrop<Tpm2bPublicKeyRsa>,
-    pub ecc: std::mem::ManuallyDrop<TpmsEccPoint>,
-    pub derive: std::mem::ManuallyDrop<TpmsDerive>,
+    pub keyed_hash: Tpm2bDigest,
+    pub sym: Tpm2bDigest,
+    pub rsa: Tpm2bPublicKeyRsa,
+    pub ecc: TpmsEccPoint,
+    pub derive: TpmsDerive,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct TpmtPublic {
     pub tipe: TpmiAlgPublic,
     pub name_alg: TpmiAlgHash,
@@ -543,47 +604,54 @@ pub struct TpmtPublic {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bPublic {
     size: u16,
     pub public_area: [u8; mem::size_of::<TpmuPublicId>()],
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bTemplate {
     size: u16,
     pub buffer: [u8; mem::size_of::<TpmtPublic>()],
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bPrivateVendorSpecific {
     size: u16,
     pub buffer: [u8; TPM2_PRIVATE_VENDOR_SPECIFIC_BYTES as usize],
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub union TPMU_SENSITIVE_COMPOSITE {
-    pub rsa: std::mem::ManuallyDrop<Tpm2bPrivateKeyRsa>,
-    pub ecc: std::mem::ManuallyDrop<Tpm2bEccParameter>,
-    pub bits: std::mem::ManuallyDrop<Tpm2bSensitiveData>,
-    pub sym: std::mem::ManuallyDrop<Tpm2bSymKey>,
-    pub any: std::mem::ManuallyDrop<Tpm2bPrivateVendorSpecific>,
+    pub rsa: Tpm2bPrivateKeyRsa,
+    pub ecc: Tpm2bEccParameter,
+    pub bits: Tpm2bSensitiveData,
+    pub sym: Tpm2bSymKey,
+    pub any: Tpm2bPrivateVendorSpecific,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct TpmtSensitive {
     pub sensitive_type: TpmiAlgPublic,
     pub auth_value: Tpm2bAuth,
     pub seed_value: Tpm2bDigest,
-    pub sensitive: std::mem::ManuallyDrop<TPMU_SENSITIVE_COMPOSITE>,
+    pub sensitive: TPMU_SENSITIVE_COMPOSITE,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bSensitive {
     size: u16,
     pub sensitive_area: [u8; mem::size_of::<TpmtSensitive>()],
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct _PRIVATE {
     integrity_outer: Tpm2bDigest,
     integrity_inner: Tpm2bDigest,
@@ -591,24 +659,28 @@ pub struct _PRIVATE {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bPrivate {
     size: u16,
     pub buffer: [u8; mem::size_of::<_PRIVATE>()],
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct TpmsIdObject {
     pub integrity_hmac: Tpm2bDigest,
     pub enc_identity: Tpm2bDigest,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bIdObject {
     size: u16,
     pub credential: [u8; mem::size_of::<TpmsIdObject>()],
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct TpmsNvPublic {
     pub nv_index: TpmiRhNvIndex,
     pub name_alg: TpmiAlgHash,
@@ -618,30 +690,35 @@ pub struct TpmsNvPublic {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bNvPublic {
     size: u16,
     pub nv_public: [u8; mem::size_of::<TpmsNvPublic>()],
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bContextSensitive {
     size: u16,
     pub buffer: [u8; TPM2_MAX_CONTEXT_SIZE as usize],
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct TpmsContextData {
     pub integrity: Tpm2bDigest,
     pub encrypted: Tpm2bContextSensitive,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bContextData {
     size: u16,
     pub buffer: [u8; mem::size_of::<TpmsContextData>()],
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct TpmsCreationData {
     pub pcr_select: TpmlPcrSelection,
     pub pcr_digest: Tpm2bDigest,
@@ -653,6 +730,7 @@ pub struct TpmsCreationData {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bCreationData {
     size: u16,
     pub creation_data: [u8; mem::size_of::<TpmsCreationData>()],
