@@ -1,30 +1,6 @@
+#![allow(dead_code)]
+
 use std::mem;
-
-pub const TPM2_SHA_DIGEST_SIZE: u32 = 20;
-pub const TPM2_SHA1_DIGEST_SIZE: u32 = 20;
-pub const TPM2_SHA256_DIGEST_SIZE: u32 = 32;
-pub const TPM2_SHA384_DIGEST_SIZE: u32 = 48;
-pub const TPM2_SHA512_DIGEST_SIZE: u32 = 64;
-pub const TPM2_SM3_256_DIGEST_SIZE: u32 = 32;
-
-pub const TPM2_MAX_DIGEST_BUFFER: u32 = 1024;
-pub const TPM2_MAX_NV_BUFFER_SIZE: u32 = 2048;
-pub const TPM2_MAX_CAP_BUFFER: u32 = 1024;
-pub const TPM2_NUM_PCR_BANKS: u32 = 16;
-pub const TPM2_MAX_PCRS: u32 = 32;
-pub const TPM2_PCR_SELECT_MAX: u32 = (TPM2_MAX_PCRS + 7) / 8;
-pub const TPM2_LABEL_MAX_BUFFER: u32 = 32;
-
-/* Encryption block sizes */
-pub const TPM2_MAX_SYM_BLOCK_SIZE: u32 = 16;
-pub const TPM2_MAX_SYM_DATA: u32 = 256;
-pub const TPM2_MAX_ECC_KEY_BYTES: u32 = 128;
-pub const TPM2_MAX_SYM_KEY_BYTES: u32 = 32;
-pub const TPM2_MAX_RSA_KEY_BYTES: u32 = 512;
-
-pub const TPM2_PRIVATE_VENDOR_SPECIFIC_BYTES: u32 = (TPM2_MAX_RSA_KEY_BYTES / 2) * (3 + 2);
-
-pub const TPM2_MAX_CONTEXT_SIZE: u32 = 5120;
 
 pub type TpmaLocality = u8;
 
@@ -64,37 +40,8 @@ pub type TpmaObject = u32;
 
 pub type Tss2Rc = Tpm2Rc;
 
-pub mod error_codes {
-    use crate::Tss2Rc;
-
-    pub const TSS2_RC_LAYER_SHIFT: u32 = 16;
-    pub const TSS2_RC_LAYER_MASK: Tss2Rc = 0xFF << TSS2_RC_LAYER_SHIFT;
-    pub const TSS2_MU_RC_LAYER: Tss2Rc = 9 << TSS2_RC_LAYER_SHIFT;
-
-    pub const TSS2_BASE_RC_GENERAL_FAILURE: Tss2Rc = 1;
-    pub const TSS2_BASE_RC_NOT_IMPLEMENTED: Tss2Rc = 2;
-    pub const TSS2_BASE_RC_BAD_CONTEXT: Tss2Rc = 3;
-    pub const TSS2_BASE_RC_ABI_MISMATCH: Tss2Rc = 4;
-    pub const TSS2_BASE_RC_BAD_REFERENCE: Tss2Rc = 5;
-    pub const TSS2_BASE_RC_INSUFFICIENT_BUFFER: Tss2Rc = 6;
-    pub const TSS2_BASE_RC_BAD_SEQUENCE: Tss2Rc = 7;
-    pub const TSS2_BASE_RC_NO_CONNECTION: Tss2Rc = 8;
-    pub const TSS2_BASE_RC_TRY_AGAIN: Tss2Rc = 9;
-    pub const TSS2_BASE_RC_IO_ERROR: Tss2Rc = 10;
-    pub const TSS2_BASE_RC_BAD_VALUE: Tss2Rc = 11;
-    pub const TSS2_BASE_RC_NOT_PERMITTED: Tss2Rc = 12;
-    pub const TSS2_BASE_RC_INVALID_SESSIONS: Tss2Rc = 13;
-    pub const TSS2_BASE_RC_NO_DECRYPT_PARAM: Tss2Rc = 14;
-    pub const TSS2_BASE_RC_NO_ENCRYPT_PARAM: Tss2Rc = 15;
-    pub const TSS2_BASE_RC_BAD_SIZE: Tss2Rc = 16;
-    pub const TSS2_BASE_RC_MALFORMED_RESPONSE: Tss2Rc = 17;
-    pub const TSS2_BASE_RC_INSUFFICIENT_CONTEXT: Tss2Rc = 18;
-    pub const TSS2_BASE_RC_INSUFFICIENT_RESPONSE: Tss2Rc = 19;
-
-    pub const TSS2_MU_RC_INSUFFICIENT_BUFFER: Tss2Rc =
-        TSS2_MU_RC_LAYER | TSS2_BASE_RC_INSUFFICIENT_BUFFER;
-    pub const TSS2_MU_RC_BAD_SIZE: Tss2Rc = TSS2_MU_RC_LAYER | TSS2_BASE_RC_BAD_SIZE;
-}
+mod constants;
+mod error_codes;
 
 #[repr(C)]
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -103,12 +50,12 @@ pub struct TpmsEmpty;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union TpmuHa {
-    sha: [u8; TPM2_SHA_DIGEST_SIZE as usize],
-    sha1: [u8; TPM2_SHA1_DIGEST_SIZE as usize],
-    sha256: [u8; TPM2_SHA256_DIGEST_SIZE as usize],
-    sha384: [u8; TPM2_SHA384_DIGEST_SIZE as usize],
-    sha512: [u8; TPM2_SHA512_DIGEST_SIZE as usize],
-    sm3_256: [u8; TPM2_SM3_256_DIGEST_SIZE as usize],
+    sha: [u8; constants::TPM2_SHA_DIGEST_SIZE as usize],
+    sha1: [u8; constants::TPM2_SHA1_DIGEST_SIZE as usize],
+    sha256: [u8; constants::TPM2_SHA256_DIGEST_SIZE as usize],
+    sha384: [u8; constants::TPM2_SHA384_DIGEST_SIZE as usize],
+    sha512: [u8; constants::TPM2_SHA512_DIGEST_SIZE as usize],
+    sm3_256: [u8; constants::TPM2_SM3_256_DIGEST_SIZE as usize],
 }
 
 #[repr(C)]
@@ -132,6 +79,9 @@ pub struct Tpm2bDigest {
     pub buffer: [u8; mem::size_of::<TpmuHa>()],
 }
 
+type Tpm2bNonce = Tpm2bDigest;
+type Tpm2bOperand = Tpm2bDigest;
+
 #[repr(C)]
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bData {
@@ -150,21 +100,21 @@ pub struct Tpm2bEvent {
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bMaxBuffer {
     size: u16,
-    pub buffer: [u8; TPM2_MAX_DIGEST_BUFFER as usize],
+    pub buffer: [u8; constants::TPM2_MAX_DIGEST_BUFFER as usize],
 }
 
 #[repr(C)]
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bMaxNvBuffer {
     size: u16,
-    pub buffer: [u8; TPM2_MAX_NV_BUFFER_SIZE as usize],
+    pub buffer: [u8; constants::TPM2_MAX_NV_BUFFER_SIZE as usize],
 }
 
 #[repr(C)]
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bIv {
     size: u16,
-    pub buffer: [u8; TPM2_MAX_SYM_BLOCK_SIZE as usize],
+    pub buffer: [u8; constants::TPM2_MAX_SYM_BLOCK_SIZE as usize],
 }
 
 #[repr(C)]
@@ -178,7 +128,7 @@ pub struct Tpm2bName {
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bMaxCapBuffer {
     size: u16,
-    pub buffer: [u8; TPM2_MAX_CAP_BUFFER as usize],
+    pub buffer: [u8; constants::TPM2_MAX_CAP_BUFFER as usize],
 }
 
 #[repr(C)]
@@ -195,14 +145,14 @@ pub struct TpmsClockInfo {
 pub struct TpmsPcrSelection {
     pub hash: TpmiAlgHash,
     pub sizeof_select: u8,
-    pub pcr_select: [u8; TPM2_PCR_SELECT_MAX as usize],
+    pub pcr_select: [u8; constants::TPM2_PCR_SELECT_MAX as usize],
 }
 
 #[repr(C)]
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct TpmlPcrSelection {
     pub count: u32,
-    pub pcr_selections: [TpmsPcrSelection; TPM2_NUM_PCR_BANKS as usize],
+    pub pcr_selections: [TpmsPcrSelection; constants::TPM2_NUM_PCR_BANKS as usize],
 }
 
 #[repr(C)]
@@ -299,14 +249,14 @@ pub struct Tpm2bAttest {
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bSymKey {
     size: u16,
-    pub buffer: [u8; TPM2_MAX_SYM_KEY_BYTES as usize],
+    pub buffer: [u8; constants::TPM2_MAX_SYM_KEY_BYTES as usize],
 }
 
 #[repr(C)]
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bLabel {
     size: u16,
-    pub buffer: [u8; TPM2_LABEL_MAX_BUFFER as usize],
+    pub buffer: [u8; constants::TPM2_LABEL_MAX_BUFFER as usize],
 }
 
 #[repr(C)]
@@ -326,7 +276,7 @@ pub struct Tpm2bDerive {
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union TpmuSensitiveCreate {
-    pub create: [u8; TPM2_MAX_SYM_DATA as usize],
+    pub create: [u8; constants::TPM2_MAX_SYM_DATA as usize],
     pub derive: TpmsDerive
 }
 
@@ -357,21 +307,21 @@ pub struct Tpm2bSensitiveCreate {
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bPublicKeyRsa {
     size: u16,
-    pub buffer: [u8; TPM2_MAX_RSA_KEY_BYTES as usize],
+    pub buffer: [u8; constants::TPM2_MAX_RSA_KEY_BYTES as usize],
 }
 
 #[repr(C)]
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bPrivateKeyRsa {
     size: u16,
-    pub buffer: [u8; (TPM2_MAX_RSA_KEY_BYTES / 2) as usize],
+    pub buffer: [u8; (constants::TPM2_MAX_RSA_KEY_BYTES / 2) as usize],
 }
 
 #[repr(C)]
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bEccParameter {
     size: u16,
-    pub buffer: [u8; TPM2_MAX_ECC_KEY_BYTES as usize],
+    pub buffer: [u8; constants::TPM2_MAX_ECC_KEY_BYTES as usize],
 }
 
 #[repr(C)]
@@ -392,7 +342,7 @@ pub struct Tpm2bEccPoint {
 #[derive(Clone, Copy)]
 pub union TpmuEncryptedSecret {
     pub ecc: [u8; mem::size_of::<TpmsEccPoint>()],
-    pub rsa: [u8; TPM2_MAX_RSA_KEY_BYTES as usize],
+    pub rsa: [u8; constants::TPM2_MAX_RSA_KEY_BYTES as usize],
     pub symmetric: [u8; mem::size_of::<Tpm2bDigest>()],
     pub keyed_hash: [u8; mem::size_of::<Tpm2bDigest>()],
 }
@@ -621,7 +571,7 @@ pub struct Tpm2bTemplate {
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bPrivateVendorSpecific {
     size: u16,
-    pub buffer: [u8; TPM2_PRIVATE_VENDOR_SPECIFIC_BYTES as usize],
+    pub buffer: [u8; constants::TPM2_PRIVATE_VENDOR_SPECIFIC_BYTES as usize],
 }
 
 #[repr(C)]
@@ -700,7 +650,7 @@ pub struct Tpm2bNvPublic {
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tpm2bContextSensitive {
     size: u16,
-    pub buffer: [u8; TPM2_MAX_CONTEXT_SIZE as usize],
+    pub buffer: [u8; constants::TPM2_MAX_CONTEXT_SIZE as usize],
 }
 
 #[repr(C)]
@@ -749,88 +699,6 @@ pub trait Tpm2bSimple {
     fn get_buffer(&self) -> &[u8];
     fn from_bytes(buffer: &[u8]) -> Result<Self, Tpm2Rc>
         where Self: Sized;
-}
-
-impl Marshalable for Tpm2bName {
-    fn unmarshal(buffer: &[u8]) -> Result<(Self, usize), Tpm2Rc> {
-        // split_at panics, so we make sure to avoid that condition
-        if buffer.len() < std::mem::size_of::<u16>() {
-            return Err(error_codes::TSS2_MU_RC_INSUFFICIENT_BUFFER);
-        }
-
-        // Split it at the sizeof(u16), ie the first two bytes
-        let (int_bytes, rest) = buffer.split_at(std::mem::size_of::<u16>());
-        let temp = int_bytes.try_into();
-        if temp.is_err() {
-            return Err(error_codes::TSS2_BASE_RC_GENERAL_FAILURE);
-        }
-        let be_size_bytes: [u8; 2] = temp.unwrap();
-        let got_size: u16 = u16::from_be_bytes(be_size_bytes);
-
-        // Ensure the buffer is large enough to fullfill the size indicated
-        if rest.len() != got_size.into() {
-            return Err(error_codes::TSS2_MU_RC_INSUFFICIENT_BUFFER);
-        }
-
-        let mut dest: Self = Self {
-            size: got_size,
-            name: [0; 68], // TODO how to initialize this based on size?
-        };
-
-        // Make sure the size indicated isn't too large for the types buffer
-        if rest.len() > dest.name.len() {
-            return Err(error_codes::TSS2_MU_RC_INSUFFICIENT_BUFFER);
-        }
-
-        let (field_data_buf, _) = rest.split_at(got_size.into());
-
-        // panicked at 'source slice length (5) does not match destination slice length (68)',
-        //dest.name.clone_from_slice(buffer_data);
-        for (dst, src) in dest.name.iter_mut().zip(field_data_buf) {
-            *dst = *src
-        }
-
-        Ok((dest, std::mem::size_of::<u16>() + usize::from(got_size)))
-    }
-
-    fn marshal(&self) -> Vec<u8> {
-        let mut vec = Vec::new();
-
-        let be_bytes = self.size.to_be_bytes();
-        vec.extend_from_slice(&be_bytes);
-        vec.extend_from_slice(&self.name);
-
-        vec
-    }
-}
-
-impl Tpm2bSimple for Tpm2bName {
-    fn get_size(&self) -> u16 {
-        self.size
-    }
-
-    fn get_buffer(&self) -> &[u8] {
-        &self.name[0..self.get_size() as usize]
-    }
-
-    fn from_bytes(buffer: &[u8]) -> Result<Self, Tpm2Rc> {
-
-        // Overflow check
-        if buffer.len() > u16::MAX as usize {
-            return Err(error_codes::TSS2_MU_RC_BAD_SIZE);
-        }
-
-        let mut dest: Self = Self {
-            size: buffer.len() as u16,
-            name: [0; 68], // TODO how to initialize this based on size?
-        };
-
-        for (dst, src) in dest.name.iter_mut().zip(buffer) {
-            *dst = *src
-        }
-
-        Ok(dest)
-    }
 }
 
 macro_rules! impl_marshalable_scalar {
@@ -958,7 +826,26 @@ macro_rules! impl_marshalable_tpm2b_simple {
     };
 }
 
-impl_marshalable_tpm2b_simple! {Tpm2bDigest, buffer }
+impl_marshalable_tpm2b_simple! {Tpm2bName, name}
+impl_marshalable_tpm2b_simple! {Tpm2bAttest, attestation_data}
+impl_marshalable_tpm2b_simple! {Tpm2bContextData, buffer}
+impl_marshalable_tpm2b_simple! {Tpm2bContextSensitive, buffer}
+impl_marshalable_tpm2b_simple! {Tpm2bData, buffer}
+impl_marshalable_tpm2b_simple! {Tpm2bDigest, buffer}
+impl_marshalable_tpm2b_simple! {Tpm2bEccParameter, buffer}
+impl_marshalable_tpm2b_simple! {Tpm2bEncryptedSecret, secret}
+impl_marshalable_tpm2b_simple! {Tpm2bEvent, buffer}
+impl_marshalable_tpm2b_simple! {Tpm2bIdObject, credential}
+impl_marshalable_tpm2b_simple! {Tpm2bIv, buffer}
+impl_marshalable_tpm2b_simple! {Tpm2bMaxBuffer, buffer}
+impl_marshalable_tpm2b_simple! {Tpm2bMaxNvBuffer, buffer}
+impl_marshalable_tpm2b_simple! {Tpm2bPrivate, buffer}
+impl_marshalable_tpm2b_simple! {Tpm2bPrivateKeyRsa, buffer}
+impl_marshalable_tpm2b_simple! {Tpm2bPrivateVendorSpecific, buffer}
+impl_marshalable_tpm2b_simple! {Tpm2bPublicKeyRsa, buffer}
+impl_marshalable_tpm2b_simple! {Tpm2bSensitiveData, buffer}
+impl_marshalable_tpm2b_simple! {Tpm2bSymKey, buffer}
+impl_marshalable_tpm2b_simple! {Tpm2bTemplate, buffer}
 
 #[cfg(test)]
 mod tests {
