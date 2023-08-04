@@ -942,66 +942,66 @@ mod tests {
     macro_rules! impl_test_scalar {
         ($T:ty, $I:expr, $V:expr) => {
             const SIZE_OF_TYPE: usize = std::mem::size_of::<$T>();
-        
+
             let too_small_buffer: [u8; SIZE_OF_TYPE - 1] = [$I; SIZE_OF_TYPE - 1];
             let same_size_buffer: [u8; SIZE_OF_TYPE] = [$I; SIZE_OF_TYPE];
             let larger_buffer: [u8; SIZE_OF_TYPE + 4] = [$I; SIZE_OF_TYPE + 4];
-    
+
             let mut res: Result<($T, usize), Tpm2Rc> = <$T>::untry_marshal(&too_small_buffer);
             assert!(res.is_err());
-            
+
             res = <$T>::untry_marshal(&same_size_buffer);
             assert!(res.is_ok());
             let (mut value, mut offset) = res.unwrap();
             assert_eq!(value, $V);
             assert_eq!(offset, SIZE_OF_TYPE);
-    
+
             res = <$T>::untry_marshal(&larger_buffer);
             assert!(res.is_ok());
             (value, offset) = res.unwrap();
             assert_eq!(value, $V);
             assert_eq!(offset, SIZE_OF_TYPE);
-        }
+        };
     }
 
     #[test]
     fn test_untry_marshal_u8() {
-        impl_test_scalar!{u8, 0xFF, 0xFF}
+        impl_test_scalar! {u8, 0xFF, 0xFF}
     }
 
     #[test]
     fn test_untry_marshal_i8() {
-        impl_test_scalar!{i8, 0x7F, 0x7F}
+        impl_test_scalar! {i8, 0x7F, 0x7F}
     }
 
     #[test]
     fn test_untry_marshal_u16() {
-        impl_test_scalar!{u16, 0xFF, 0xFFFF}
+        impl_test_scalar! {u16, 0xFF, 0xFFFF}
     }
 
     #[test]
     fn test_untry_marshal_i16() {
-        impl_test_scalar!{i16, 0x7F, 0x7F7F}
+        impl_test_scalar! {i16, 0x7F, 0x7F7F}
     }
 
     #[test]
     fn test_untry_marshal_u32() {
-        impl_test_scalar!{u32, 0xFF, 0xFFFFFFFF}
+        impl_test_scalar! {u32, 0xFF, 0xFFFFFFFF}
     }
 
     #[test]
     fn test_untry_marshal_i32() {
-        impl_test_scalar!{i32, 0x7F, 0x7F7F7F7F}
+        impl_test_scalar! {i32, 0x7F, 0x7F7F7F7F}
     }
 
     #[test]
     fn test_untry_marshal_u64() {
-        impl_test_scalar!{u64, 0xFF, 0xFFFFFFFFFFFFFFFF}
+        impl_test_scalar! {u64, 0xFF, 0xFFFFFFFFFFFFFFFF}
     }
 
     #[test]
     fn test_untry_marshal_i64() {
-        impl_test_scalar!{i64, 0x7F, 0x7F7F7F7F7F7F7F7F}
+        impl_test_scalar! {i64, 0x7F, 0x7F7F7F7F7F7F7F7F}
     }
 
     #[test]
