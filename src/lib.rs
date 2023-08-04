@@ -1,5 +1,4 @@
 #![allow(dead_code)]
-
 use std::mem;
 
 pub type TpmaLocality = u8;
@@ -277,7 +276,7 @@ pub struct Tpm2bDerive {
 #[derive(Clone, Copy)]
 pub union TpmuSensitiveCreate {
     pub create: [u8; constants::TPM2_MAX_SYM_DATA as usize],
-    pub derive: TpmsDerive
+    pub derive: TpmsDerive,
 }
 
 #[repr(C)]
@@ -698,7 +697,8 @@ pub trait Tpm2bSimple {
     fn get_size(&self) -> u16;
     fn get_buffer(&self) -> &[u8];
     fn from_bytes(buffer: &[u8]) -> Result<Self, Tpm2Rc>
-        where Self: Sized;
+    where
+        Self: Sized;
 }
 
 macro_rules! impl_marshalable_scalar {
@@ -751,21 +751,20 @@ macro_rules! impl_marshalable_tpm2b_simple {
             }
 
             fn from_bytes(buffer: &[u8]) -> Result<Self, Tpm2Rc> {
-
                 // Overflow check
                 if buffer.len() > u16::MAX as usize {
                     return Err(error_codes::TSS2_MU_RC_BAD_SIZE);
                 }
-        
+
                 let mut dest: Self = Self {
                     size: buffer.len() as u16,
                     $F: [0; std::mem::size_of::<$T>() - std::mem::size_of::<u16>()],
                 };
-        
+
                 for (dst, src) in dest.$F.iter_mut().zip(buffer) {
                     *dst = *src
                 }
-        
+
                 Ok(dest)
             }
         }
@@ -849,7 +848,96 @@ impl_marshalable_tpm2b_simple! {Tpm2bTemplate, buffer}
 
 #[cfg(test)]
 mod tests {
-    use crate::{Marshalable, Tpm2Rc, Tpm2bDigest, Tpm2bName, Tpm2bSimple};
+    use crate::{
+        Marshalable, Tpm2Rc, Tpm2bAttest, Tpm2bContextData, Tpm2bContextSensitive, Tpm2bData,
+        Tpm2bDigest, Tpm2bEccParameter, Tpm2bEncryptedSecret, Tpm2bEvent, Tpm2bIdObject, Tpm2bIv,
+        Tpm2bMaxBuffer, Tpm2bMaxNvBuffer, Tpm2bName, Tpm2bPrivate, Tpm2bPrivateKeyRsa,
+        Tpm2bPrivateVendorSpecific, Tpm2bPublicKeyRsa, Tpm2bSensitiveData, Tpm2bSimple,
+        Tpm2bSymKey, Tpm2bTemplate,
+    };
+
+    // Unfortunately, I didn't see a way to generate a function name easily, see
+    // https://github.com/rust-lang/rust/issues/29599 for more details. So we just
+    // generate the test body here.
+    macro_rules! impl_test_tpm2b_simple {
+        ($T:ty) => {
+            const SIZE_OF_U16: usize = std::mem::size_of::<u16>();
+            const SIZE_OF_TYPE: usize = std::mem::size_of::<$T>();
+            const SIZE_OF_BUFFER: usize = SIZE_OF_TYPE - SIZE_OF_U16;
+
+            /*
+             * Generate arrays that are:
+             *   - too small
+             *   - smaller than buffer limit
+             *   - same size as buffer limit
+             *   - exceeding buffer limit
+             */
+            let too_small_size_buf: [u8; 1] = [0x00; 1];
+            let mut smaller_size_buf: [u8; SIZE_OF_TYPE - 8] = [0xFF; SIZE_OF_TYPE - 8];
+            let mut same_size_buf: [u8; SIZE_OF_TYPE] = [0xFF; SIZE_OF_TYPE];
+            let mut bigger_size_buf: [u8; SIZE_OF_TYPE + 8] = [0xFF; SIZE_OF_TYPE + 8];
+
+            let mut s: u16 = (smaller_size_buf.len() - SIZE_OF_U16) as u16;
+            let mut b: Vec<u8> = s.marshal();
+
+            let mut index: usize = 0;
+            while index < b.len() {
+                smaller_size_buf[index] = b[index];
+                index += 1;
+            }
+
+            s = (same_size_buf.len() - SIZE_OF_U16) as u16;
+            b = s.marshal();
+
+            index = 0;
+            while index < b.len() {
+                same_size_buf[index] = b[index];
+                index += 1;
+            }
+
+            s = (bigger_size_buf.len() - SIZE_OF_U16) as u16;
+            b = s.marshal();
+
+            index = 0;
+            while index < b.len() {
+                bigger_size_buf[index] = b[index];
+                index += 1;
+            }
+
+            // too small should fail
+            let mut result: Result<($T, usize), Tpm2Rc> = <$T>::unmarshal(&too_small_size_buf);
+            assert!(result.is_err());
+
+            // bigger size should fail
+            result = <$T>::unmarshal(&bigger_size_buf);
+            assert!(result.is_err());
+
+            // small, should be good
+            result = <$T>::unmarshal(&smaller_size_buf);
+            assert!(result.is_ok());
+            let (mut digest, mut offset) = result.unwrap();
+            assert_eq!(offset, smaller_size_buf.len());
+            assert_eq!(
+                usize::from(digest.get_size()),
+                smaller_size_buf.len() - SIZE_OF_U16
+            );
+            assert_eq!(digest.get_buffer(), &smaller_size_buf[SIZE_OF_U16..]);
+
+            // same size should be good
+            result = <$T>::unmarshal(&same_size_buf);
+            assert!(result.is_ok());
+            (digest, offset) = result.unwrap();
+            assert_eq!(offset, same_size_buf.len());
+            assert_eq!(
+                usize::from(digest.get_size()),
+                same_size_buf.len() - std::mem::size_of::<u16>()
+            );
+            assert_eq!(
+                digest.get_buffer(),
+                &same_size_buf[std::mem::size_of::<u16>()..]
+            );
+        };
+    }
 
     #[test]
     fn test_unmarshal_u8() {
@@ -863,92 +951,101 @@ mod tests {
 
     #[test]
     fn test_unmarshal_tpm2b_name() {
-        let n: [u8; 7] = [0x00, 0x05, b'h', b'e', b'l', b'l', b'o'];
+        impl_test_tpm2b_simple! {Tpm2bName};
+    }
 
-        let name_result: Result<(Tpm2bName, usize), u32> = Tpm2bName::unmarshal(&n);
-        assert!(name_result.is_ok());
-        let (name, offset) = name_result.unwrap();
-        assert_eq!(offset, n.len());
-        assert_eq!(name.get_size(), 5);
-        let slice = name.get_buffer();
-        assert_eq!(slice, &n[2..]);
+    #[test]
+    fn test_unmarshal_tpm2b_attest() {
+        impl_test_tpm2b_simple! {Tpm2bAttest};
+    }
 
-        let m: [u8; 5] = [b'h', b'e', b'l', b'l', b'o'];
-        let name_result: Result<Tpm2bName, Tpm2Rc> = Tpm2bName::from_bytes(&m);
-        assert!(name_result.is_ok());
-        let name2 = name_result.unwrap();
-        assert_eq!(name, name2);
+    #[test]
+    fn test_unmarshal_tpm2b_context_data() {
+        impl_test_tpm2b_simple! {Tpm2bContextData};
+    }
+
+    #[test]
+    fn test_unmarshal_tpm2b_context_sensitive() {
+        impl_test_tpm2b_simple! {Tpm2bContextSensitive};
+    }
+
+    #[test]
+    fn test_unmarshal_tpm2b_data() {
+        impl_test_tpm2b_simple! {Tpm2bData};
     }
 
     #[test]
     fn test_unmarshal_tpm2b_digest() {
-        
-        const SIZE_OF_U16: usize = std::mem::size_of::<u16>();
-        const SIZE_OF_TYPE: usize = std::mem::size_of::<Tpm2bDigest>();
-        const SIZE_OF_BUFFER: usize = SIZE_OF_TYPE - SIZE_OF_U16;
+        impl_test_tpm2b_simple! {Tpm2bDigest};
+    }
 
-        /*
-         * Generate arrays that are:
-         *   - too small
-         *   - smaller than buffer limit
-         *   - same size as buffer limit
-         *   - exceeding buffer limit
-         */
-        let too_small_size_buf: [u8; 1] = [0x00; 1];
-        let mut smaller_size_buf: [u8; SIZE_OF_TYPE - 8] = [0xFF; SIZE_OF_TYPE - 8];
-        let mut same_size_buf: [u8; SIZE_OF_TYPE] = [0xFF; SIZE_OF_TYPE];
-        let mut bigger_size_buf: [u8; SIZE_OF_TYPE + 8] = [0xFF; SIZE_OF_TYPE + 8];
+    #[test]
+    fn test_unmarshal_tpm2b_ecc_parameter() {
+        impl_test_tpm2b_simple! {Tpm2bEccParameter};
+    }
 
-        let mut s: u16 = (smaller_size_buf.len() - SIZE_OF_U16) as u16;
-        let mut b: Vec<u8> = s.marshal();
+    #[test]
+    fn test_unmarshal_tpm2b_encrypted_secret() {
+        impl_test_tpm2b_simple! {Tpm2bEncryptedSecret};
+    }
 
-        let mut index: usize = 0;
-        while index < b.len() {
-            smaller_size_buf[index] = b[index];
-            index += 1;
-        }
+    #[test]
+    fn test_unmarshal_tpm2b_event() {
+        impl_test_tpm2b_simple! {Tpm2bEvent};
+    }
 
-        s = (same_size_buf.len() - SIZE_OF_U16) as u16;
-        b = s.marshal();
+    #[test]
+    fn test_unmarshal_tpm2b_id_object() {
+        impl_test_tpm2b_simple! {Tpm2bIdObject};
+    }
 
-        index = 0;
-        while index < b.len() {
-            same_size_buf[index] = b[index];
-            index += 1;
-        }
+    #[test]
+    fn test_unmarshal_tpm2b_iv() {
+        impl_test_tpm2b_simple! {Tpm2bIv};
+    }
 
-        s = (bigger_size_buf.len() - SIZE_OF_U16) as u16;
-        b = s.marshal();
+    #[test]
+    fn test_unmarshal_tpm2b_max_buffer() {
+        impl_test_tpm2b_simple! {Tpm2bMaxBuffer};
+    }
 
-        index = 0;
-        while index < b.len() {
-            bigger_size_buf[index] = b[index];
-            index += 1;
-        }
+    #[test]
+    fn test_unmarshal_tpm2b_max_nv_buffer() {
+        impl_test_tpm2b_simple! {Tpm2bMaxNvBuffer};
+    }
 
-        // too small should fail
-        let mut result: Result<(Tpm2bDigest, usize), Tpm2Rc> = Tpm2bDigest::unmarshal(&too_small_size_buf);
-        assert!(result.is_err());
+    #[test]
+    fn test_unmarshal_tpm2b_private() {
+        impl_test_tpm2b_simple! {Tpm2bPrivate};
+    }
 
-        // bigger size should fail
-        result = Tpm2bDigest::unmarshal(&bigger_size_buf);
-        assert!(result.is_err());
+    #[test]
+    fn test_unmarshal_tpm2b_private_key_rsa() {
+        impl_test_tpm2b_simple! {Tpm2bPrivateKeyRsa};
+    }
 
-        // small, should be good
-        result = Tpm2bDigest::unmarshal(&smaller_size_buf);
-        assert!(result.is_ok());
-        let (mut digest, mut offset) = result.unwrap();
-        assert_eq!(offset, smaller_size_buf.len());
-        assert_eq!(usize::from(digest.get_size()), smaller_size_buf.len() - SIZE_OF_U16);
-        assert_eq!(digest.get_buffer(), &smaller_size_buf[SIZE_OF_U16..]);
+    #[test]
+    fn test_unmarshal_tpm2b_private_vendor_specific() {
+        impl_test_tpm2b_simple! {Tpm2bPrivateVendorSpecific};
+    }
 
+    #[test]
+    fn test_unmarshal_tpm2b_public_key_rsa() {
+        impl_test_tpm2b_simple! {Tpm2bPublicKeyRsa};
+    }
 
-        // same size should be good
-        result = Tpm2bDigest::unmarshal(&same_size_buf);
-        assert!(result.is_ok());
-        (digest, offset) = result.unwrap();
-        assert_eq!(offset, same_size_buf.len());
-        assert_eq!(usize::from(digest.get_size()), same_size_buf.len() - std::mem::size_of::<u16>());
-        assert_eq!(digest.get_buffer(), &same_size_buf[std::mem::size_of::<u16>()..]);
+    #[test]
+    fn test_unmarshal_tpm2b_sensitive_data() {
+        impl_test_tpm2b_simple! {Tpm2bSensitiveData};
+    }
+
+    #[test]
+    fn test_unmarshal_tpm2b_sym_key() {
+        impl_test_tpm2b_simple! {Tpm2bSymKey};
+    }
+
+    #[test]
+    fn test_unmarshal_tpm2b_template() {
+        impl_test_tpm2b_simple! {Tpm2bTemplate};
     }
 }
