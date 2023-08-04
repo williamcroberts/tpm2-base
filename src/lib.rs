@@ -882,17 +882,73 @@ mod tests {
 
     #[test]
     fn test_unmarshal_tpm2b_digest() {
-        let n: [u8; 22] = [
-            0x00, 0x14, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11,
-            0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19,
-        ];
+        
+        const SIZE_OF_U16: usize = std::mem::size_of::<u16>();
+        const SIZE_OF_TYPE: usize = std::mem::size_of::<Tpm2bDigest>();
+        const SIZE_OF_BUFFER: usize = SIZE_OF_TYPE - SIZE_OF_U16;
 
-        let name_result: Result<(Tpm2bDigest, usize), u32> = Tpm2bDigest::unmarshal(&n);
-        assert!(name_result.is_ok());
-        let (digest, offset) = name_result.unwrap();
-        assert_eq!(offset, n.len());
-        assert_eq!(digest.get_size(), 20);
-        let slice = digest.get_buffer();
-        assert_eq!(slice, &n[2..]);
+        /*
+         * Generate arrays that are:
+         *   - too small
+         *   - smaller than buffer limit
+         *   - same size as buffer limit
+         *   - exceeding buffer limit
+         */
+        let too_small_size_buf: [u8; 1] = [0x00; 1];
+        let mut smaller_size_buf: [u8; SIZE_OF_TYPE - 8] = [0xFF; SIZE_OF_TYPE - 8];
+        let mut same_size_buf: [u8; SIZE_OF_TYPE] = [0xFF; SIZE_OF_TYPE];
+        let mut bigger_size_buf: [u8; SIZE_OF_TYPE + 8] = [0xFF; SIZE_OF_TYPE + 8];
+
+        let mut s: u16 = (smaller_size_buf.len() - SIZE_OF_U16) as u16;
+        let mut b: Vec<u8> = s.marshal();
+
+        let mut index: usize = 0;
+        while index < b.len() {
+            smaller_size_buf[index] = b[index];
+            index += 1;
+        }
+
+        s = (same_size_buf.len() - SIZE_OF_U16) as u16;
+        b = s.marshal();
+
+        index = 0;
+        while index < b.len() {
+            same_size_buf[index] = b[index];
+            index += 1;
+        }
+
+        s = (bigger_size_buf.len() - SIZE_OF_U16) as u16;
+        b = s.marshal();
+
+        index = 0;
+        while index < b.len() {
+            bigger_size_buf[index] = b[index];
+            index += 1;
+        }
+
+        // too small should fail
+        let mut result: Result<(Tpm2bDigest, usize), Tpm2Rc> = Tpm2bDigest::unmarshal(&too_small_size_buf);
+        assert!(result.is_err());
+
+        // bigger size should fail
+        result = Tpm2bDigest::unmarshal(&bigger_size_buf);
+        assert!(result.is_err());
+
+        // small, should be good
+        result = Tpm2bDigest::unmarshal(&smaller_size_buf);
+        assert!(result.is_ok());
+        let (mut digest, mut offset) = result.unwrap();
+        assert_eq!(offset, smaller_size_buf.len());
+        assert_eq!(usize::from(digest.get_size()), smaller_size_buf.len() - SIZE_OF_U16);
+        assert_eq!(digest.get_buffer(), &smaller_size_buf[SIZE_OF_U16..]);
+
+
+        // same size should be good
+        result = Tpm2bDigest::unmarshal(&same_size_buf);
+        assert!(result.is_ok());
+        (digest, offset) = result.unwrap();
+        assert_eq!(offset, same_size_buf.len());
+        assert_eq!(usize::from(digest.get_size()), same_size_buf.len() - std::mem::size_of::<u16>());
+        assert_eq!(digest.get_buffer(), &same_size_buf[std::mem::size_of::<u16>()..]);
     }
 }
